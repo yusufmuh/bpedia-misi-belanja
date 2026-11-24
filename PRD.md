@@ -1,33 +1,62 @@
-# PRD 03 · Misi Belanja Bertahap
+# PRD 03 · Misi Belanja Bertahap / Suf (Bpedia Kelopak)
 
-**Versi 0.1 · 24 November 2026 · Pemilik keputusan bisnis: tim perdagangan Bpedia**
+**Versi 1.0 (Final & Resmi) · 24 November 2026 · Owner: Muhammad Yusuf (Bpedia)**  
+Dokumen spesifikasi teknis dan aturan bisnis modul Misi Belanja Bertahap Bpedia Kelopak.  
+Induk acuan: `bpedia-kelopak-hub/PRD.md`.
 
-## Janji kepada pembeli
-Selesaikan satu pesanan dengan nilai barang yang memenuhi syarat minimal Rp75.000. Setelah sistem pesanan menyatakan selesai, satu voucher Rp10.000 masuk ke akun. Pengguna dapat memakainya sekali pada pesanan berbeda berikutnya dengan belanja minimal Rp100.000. Tahap berikutnya terbuka sesudah hadiah tahap sebelumnya berhasil diterbitkan.
+---
 
-## Alur dan tahap
-| Situasi | Yang terlihat | Keputusan sistem |
-|---|---|---|
-| Belum memenuhi syarat | Tahap 1 aktif, syarat dan hadiah terbaca | Arahkan ke katalog |
-| Sudah dibayar atau dalam pengiriman | Pesanan sedang diproses | Tunggu status selesai dari sumber pesanan |
-| Pesanan selesai dan cukup | Voucher tersedia dengan nilai, minimal belanja dan masa berlaku | Terbitkan satu voucher personal dan buka tahap berikutnya |
-| Tahap berikutnya belum dikonfigurasi | Tahap berikutnya menunggu kampanye | Simpan progres yang telah diperoleh |
-| Checkout baru memenuhi syarat | Diskon Rp10.000 dan total setelah diskon | Reservasi voucher pada checkout lalu konsumsi saat komit order |
+## 1. Tujuan & Nilai bagi Pengguna
+Mendorong transaksi riil dan pesanan berulang (*repeat purchase*) di platform Bpedia. Pembeli yang menyelesaikan transaksi belanja berhak atas voucher diskon yang dapat digunakan pada transaksi berikutnya.
 
-Asumsi perhitungan adalah subtotal barang sesudah diskon produk, sebelum ongkir, biaya layanan dan voucher ini. Satu transaksi Rp75.000 memenuhi batas, dua transaksi Rp40.000 dan Rp35.000 terpisah tidak. Satu pesanan hanya memajukan satu tahap. Contoh tahap 2 untuk demo adalah pesanan selesai baru minimal Rp100.000 memberi voucher Rp5.000 dengan minimal penukaran Rp100.000. Tim bisnis menyetujui semua nilai tahap tambahan, stacking, kategori yang dikecualikan, masa berlaku dan biaya kampanye.
+---
 
-## Integrasi pesanan, dompet voucher dan checkout
-Order service mengirim event terautentikasi berisi event_id, order_id, akun stabil, status, waktu selesai, mata uang IDR dan subtotal eligible integer. Pemroses mengabaikan duplikat serta event lama yang tiba setelah status baru. Transaksi menyimpan kemajuan, voucher unik (akun, kampanye, tahap), dan aktivasi tahap berikutnya. Validasi waktu penyelesaian terhadap saat tahap dibuka. Backend checkout memvalidasi kepemilikan, masa berlaku, jumlah belanja, order asal dan status voucher pada saat penggunaan. Reservasi memiliki tenggat, commit dapat diulang, pembayaran gagal melepaskan reservasi.
+## 2. Struktur Misi Bertingkat (Suf / Tiered Levels)
 
-Pesanan dibatalkan sebelum selesai tidak memberi hadiah. Usulan untuk retur setelah hadiah terbit adalah membatalkan voucher yang belum dipakai dan menandai voucher terpakai untuk rekonsiliasi CS. Pemilik kebijakan menetapkan perlakuan retur parsial, retur sesudah penukaran, dan transaksi checkout yang sedang berjalan sebelum rilis.
+| Tahap (Suf) | Syarat Belanja Pesanan | Hadiah yang Diterbitkan | Syarat Penggunaan Voucher |
+|---|---|---|---|
+| **Tahap 1** | Selesaikan 1 pesanan **≥ Rp75.000** | **Voucher Rp10.000** | Belanja berikutnya **minimal Rp100.000** |
+| **Tahap 2** | Selesaikan 1 pesanan **≥ Rp100.000** | **Voucher Rp5.000** | Belanja berikutnya **minimal Rp100.000** |
+| **Tahap Selanjutnya** | Dikonfigurasi dinamis via server | Voucher diskon / Kelopak | Sesuai konfigurasi kampanye aktif |
 
-## Uji penerimaan
-1. Rp74.999 gagal dan Rp75.000 lolos hanya pada satu pesanan selesai. Pesanan dibayar, batal, atau berstatus proses belum menerbitkan voucher.
-2. Dua salinan webhook atau dua perangkat menghasilkan satu voucher; pesanan yang sama tidak mengisi tahap selanjutnya.
-3. Penukaran pada order asal gagal. Order berikutnya Rp99.999 gagal. Rp100.000 lolos dan diskon Rp10.000 terlihat dalam rincian checkout.
-4. Satu voucher dipakai dari dua checkout serentak. Satu konsumsi sukses; yang lain menampilkan alasan dan memuat saldo voucher terbaru.
-5. Tahap 2 hanya terbuka setelah penerbitan voucher pertama. Menukar voucher pertama bukan prasyarat pembukaan tahap 2. Uji pengembalian dan tertundanya webhook lintas hari.
-6. Pengguna yang masuk kembali dari iOS, Android dan web melihat sumber pesanan, status dan voucher yang sama.
+### Aturan Bisnis & Validasi Pesanan:
+1. **Status Wajib Selesai**: Hanya pesanan yang telah berstatus **SELESAI (`completed`)** oleh sistem logistik/order Bpedia yang berhak memicu hadiah. Pesanan dalam status checkout, dibayar, dikirim, dibatalkan, atau diretur tidak berlaku.
+2. **Perhitungan Subtotal**: Nilai yang diperiksa adalah subtotal harga produk (sesudah diskon produk, sebelum ongkir, biaya layanan, dan sebelum voucher misi ini).
+3. **Mekanisme Berantai (Unlock)**: Tahap 2 hanya terbuka setelah voucher Tahap 1 berhasil diterbitkan.
+4. **Anti-Self-Loop**: Voucher tidak dapat digunakan pada nomor pesanan yang menerbitkan voucher tersebut.
+5. **Satu Pesanan Satu Tahap**: Satu pesanan belanja besar (misal Rp200.000) hanya menyelesaikan 1 tahap aktif saat itu.
 
-## Pengukuran
-Product memantau jumlah akun yang masuk tahap, persentase voucher terbit, redemption pada order berbeda, waktu tunda webhook, pesanan ulangan, dan margin sesudah subsidi. Finance merekonsiliasi jumlah/nilai voucher issued, redeemed, expired, revoked, dan reserved dengan transaksi checkout.
+---
+
+## 3. Komponen Antarmuka & Aksesibilitas
+1. **Kartu Tahap Misi**:
+   - Menampilkan status: *"Tercapai"*, *"Aktif"*, atau *"Terkunci"*.
+   - Rincian syarat belanja dan nominal voucher dalam format mata uang Rupiah (`Rp75.000`, `Rp10.000`).
+2. **Tombol Penggunaan / Pengujian Voucher**:
+   - Menampilkan status: *"Uji voucher di pesanan berikutnya"* atau *"Voucher sudah dipakai"*.
+3. **Aksesibilitas**:
+   - Semua teks nominal dan status menggunakan widget teks berbobot semantik tinggi untuk pembaca layar.
+
+---
+
+## 4. Integrasi Order Webhook & Checkout
+- **Webhook Order Selesai**: `POST /v1/orders/completed`
+  ```json
+  {
+    "eventId": "evt-77123",
+    "userId": "usr-001",
+    "orderId": "ORD-20261124-77",
+    "completedAt": "2026-11-24T19:00:00+07:00",
+    "eligibleSubtotal": 75000
+  }
+  ```
+- **Validasi Checkout**: Backend checkout Bpedia memvalidasi apakah voucher milik pengguna yang sama, belum pernah dipakai, pesanan bukan pesanan asal, dan subtotal pesanan baru ≥ Rp100.000.
+
+---
+
+## 5. Pengujian Mutu (Test Scenarios)
+1. Pesanan Rp74.999 tidak menyelesaikan Tahap 1.
+2. Pesanan Rp75.000 yang berstatus selesai menerbitkan voucher Rp10.000 dan membuka Tahap 2.
+3. Pesanan belum selesai (status pending/processing) tidak menerbitkan voucher.
+4. Voucher Rp10.000 ditolak jika dicoba pada pesanan dengan subtotal di bawah Rp100.000.
+5. Voucher Rp10.000 berhasil diterapkan pada pesanan baru senilai Rp100.000, menghasilkan subtotal akhir Rp90.000.
