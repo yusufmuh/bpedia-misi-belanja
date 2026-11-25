@@ -110,6 +110,21 @@ final class MissionVoucher {
     );
   }
 
+  /// Salinan yang kembali bisa dipakai setelah pesanan pemakainya batal;
+  /// masa berlaku tidak berubah. Voucher yang belum dipakai dikembalikan apa
+  /// adanya.
+  MissionVoucher release() => isUsed
+      ? MissionVoucher(
+          id: id,
+          stageNumber: stageNumber,
+          sourceOrderId: sourceOrderId,
+          amount: amount,
+          minSpend: minSpend,
+          issuedDay: issuedDay,
+          expiresDay: expiresDay,
+        )
+      : this;
+
   /// JSON-safe map; [MissionVoucher.fromJson] reads it back.
   Map<String, Object?> toJson() => <String, Object?>{
     'id': id,

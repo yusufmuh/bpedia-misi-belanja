@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:misi_belanja/misi_belanja.dart';
 
+import 'support/v2_fixtures.dart';
+
 MissionDecision _evaluate({
   int issuedCount = 0,
   Set<String> counted = const <String>{},
@@ -8,7 +10,7 @@ MissionDecision _evaluate({
   required int subtotal,
   bool completed = true,
 }) => evaluateOrder(
-  stages: demoMissionStages,
+  stages: v2MissionStages,
   issuedCount: issuedCount,
   countedOrderIds: counted,
   orderId: orderId,
@@ -29,7 +31,7 @@ void main() {
       final MissionDecision decision = _evaluate(subtotal: 75000);
       expect(decision.issued, isTrue);
       expect(decision.rejection, isNull);
-      expect(decision.issuedStage, demoMissionStages[0]);
+      expect(decision.issuedStage, v2MissionStages[0]);
       expect(decision.issuedStage?.voucherAmount, 10000);
     });
   });
@@ -53,7 +55,7 @@ void main() {
         orderId: 'BP-1002',
         subtotal: 100000,
       );
-      expect(decision.issuedStage, demoMissionStages[1]);
+      expect(decision.issuedStage, v2MissionStages[1]);
       expect(decision.issuedStage?.voucherAmount, 5000);
     });
   });
@@ -125,8 +127,8 @@ void main() {
   group('MissionDecision', () {
     test('kesetaraan nilai', () {
       expect(
-        MissionDecision.issued(demoMissionStages[0]),
-        MissionDecision.issued(demoMissionStages[0]),
+        MissionDecision.issued(v2MissionStages[0]),
+        MissionDecision.issued(v2MissionStages[0]),
       );
       expect(
         const MissionDecision.rejected(OrderRejection.belowThreshold),

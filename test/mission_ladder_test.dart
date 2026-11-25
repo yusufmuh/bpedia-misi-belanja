@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:misi_belanja/misi_belanja.dart';
 
 import 'support/test_app.dart';
+import 'support/v2_fixtures.dart';
 
 const String _note =
     'Pesanan BP-1002 senilai Rp120.000 sedang dikirim. Tekan Pesanan Diterima '
@@ -18,7 +19,7 @@ Future<void> _pumpLadder(
 }) => pumpInApp(
   tester,
   MissionLadder(
-    stages: demoMissionStages,
+    stages: v2MissionStages,
     issuedCount: issuedCount,
     pendingNote: pendingNote,
   ),
@@ -127,7 +128,7 @@ void main() {
         of: find.byType(MissionLadder),
         matching: find.byType(MergeSemantics),
       ),
-      findsNWidgets(demoMissionStages.length),
+      findsNWidgets(v2MissionStages.length),
     );
   });
 

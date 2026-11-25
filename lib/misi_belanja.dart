@@ -4,6 +4,13 @@ library;
 
 export 'src/mission_order.dart'
     show MissionDecision, OrderRejection, evaluateOrder;
+export 'src/mission_products.dart'
+    show
+        MissionOrderLine,
+        MissionProgress,
+        evaluateOrderLines,
+        missionProgress,
+        missionSubtotal;
 export 'src/mission_stage.dart'
     show
         MissionStage,

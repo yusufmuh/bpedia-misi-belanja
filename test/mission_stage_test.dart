@@ -17,16 +17,16 @@ void main() {
       );
     });
 
-    test('tahap 2 (Demo): min. Rp100.000 -> voucher Rp5.000, min. belanja '
-        'Rp100.000, 30 hari', () {
+    test('tahap 2 (demo v3): min. Rp100.000 -> voucher Rp15.000, min. belanja '
+        'Rp150.000, 30 hari', () {
       expect(demoMissionStages, hasLength(2));
       expect(
         demoMissionStages[1],
         const MissionStage(
           number: 2,
           minOrderSubtotal: 100000,
-          voucherAmount: 5000,
-          voucherMinSpend: 100000,
+          voucherAmount: 15000,
+          voucherMinSpend: 150000,
           voucherValidDays: 30,
         ),
       );
