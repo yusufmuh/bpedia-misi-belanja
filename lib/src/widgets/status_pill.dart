@@ -1,50 +1,84 @@
 import 'package:flutter/material.dart';
 
-/// Compact status label used by the ladder and the voucher card.
+import 'mission_tones.dart';
+
+/// Nada warna [StatusPill].
+enum StatusTone {
+  /// Pink lembut: aktif, di keranjang.
+  brand,
+
+  /// Hijau: selesai, siap checkout.
+  success,
+
+  /// Emas: hadiah, menunggu.
+  gold,
+
+  /// Biru: pesanan sedang diproses.
+  info,
+
+  /// Netral: terkunci, kedaluwarsa, terpakai.
+  neutral,
+}
+
+/// Pil status kecil berikon (tinggi 24 pada skala 100%).
 class StatusPill extends StatelessWidget {
-  /// Creates a pill with [label] in [foreground] on [background].
+  /// Membuat pil berlabel [label] dengan nada [tone].
   const StatusPill({
     super.key,
     required this.label,
-    required this.background,
-    required this.foreground,
+    this.tone = StatusTone.brand,
     this.icon,
   });
 
-  /// Status text, always visible.
+  /// Teks status.
   final String label;
 
-  /// Fill colour taken from the host [ColorScheme].
-  final Color background;
+  /// Nada warna.
+  final StatusTone tone;
 
-  /// Text and icon colour taken from the host [ColorScheme].
-  final Color foreground;
-
-  /// Optional leading icon reinforcing the status.
+  /// Ikon kecil di depan teks.
   final IconData? icon;
 
   @override
   Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final MissionTones tones = MissionTones.of(context);
+    final (Color background, Color foreground) = switch (tone) {
+      StatusTone.brand => (scheme.primaryContainer, scheme.onPrimaryContainer),
+      StatusTone.success => (tones.successTint, tones.success),
+      StatusTone.gold => (tones.goldTint, tones.onGoldTint),
+      StatusTone.info => (tones.infoTint, tones.info),
+      StatusTone.neutral => (
+        scheme.surfaceContainerHighest,
+        scheme.onSurfaceVariant,
+      ),
+    };
     final IconData? glyph = icon;
-    final TextStyle? style = Theme.of(context).textTheme.labelMedium?.copyWith(
-      color: foreground,
-      fontWeight: FontWeight.w600,
-    );
     return DecoratedBox(
       decoration: BoxDecoration(
         color: background,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             if (glyph != null) ...<Widget>[
-              Icon(glyph, size: 14, color: foreground),
+              Icon(glyph, size: 13, color: foreground),
               const SizedBox(width: 4),
             ],
-            Flexible(child: Text(label, style: style)),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  height: 14 / 11,
+                  fontWeight: FontWeight.w600,
+                  color: foreground,
+                ),
+              ),
+            ),
           ],
         ),
       ),

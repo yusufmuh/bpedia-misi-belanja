@@ -1,6 +1,9 @@
 name: misi_belanja
-description: Misi Belanja bertahap Bpedia Preview. Aturan tahap dan voucher, format rupiah, serta widget MissionLadder dan VoucherCard.
-version: 2.0.0
+description: >-
+  Misi Belanja untuk Bpedia Demo v3. Aturan murni tahap misi, subtotal produk
+  misi, dan voucher, serta halaman game siap pakai: daftar produk misi, progres
+  beranimasi dengan Bipy berjalan, kupon voucher, dan perayaan tahap tuntas.
+version: 3.0.0
 publish_to: none
 
 environment:
@@ -18,3 +21,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/bipy/
+    - assets/art/
+    - assets/fx/

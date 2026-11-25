@@ -1,233 +1,247 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
+import '../kit/kit.dart';
+import '../mission_assets.dart';
 import '../mission_stage.dart';
 import '../rupiah.dart';
+import 'mission_tones.dart';
 import 'status_pill.dart';
 
-const double _indicatorSize = 32;
-const double _indicatorTop = 12;
-const double _lineWidth = 2;
-const double _lineGap = 4;
-const double _rowGap = 12;
-const double _contentGap = 12;
-const double _detailIconSize = 18;
-const double _fallbackLineHeight = 1.4;
-
-double _firstLineIconTop(
-  BuildContext context,
-  TextStyle? style,
-  double iconSize,
-) {
-  final double fontSize = style?.fontSize ?? 14;
-  final double lineHeight =
-      MediaQuery.textScalerOf(context).scale(fontSize) *
-      (style?.height ?? _fallbackLineHeight);
-  return math.max(0, (lineHeight - iconSize) / 2);
-}
-
-/// Vertical timeline of mission stages ("Tahap 1", "Tahap 2", ...) followed by
-/// a muted row saying the next stage awaits a campaign.
+/// Tangga tahap Misi Belanja: jalur horizontal bernomor (lingkaran, garis
+/// penghubung, nominal voucher tiap tahap) lalu kartu tiap tahap dengan
+/// target, kupon hadiah, dan status.
 ///
-/// [issuedCount] is the number of stage vouchers issued so far. [pendingNote]
-/// is shown under the active stage, for example when a qualifying order is
-/// still being delivered.
+/// Status tahap memakai aturan murni [stageStatus]. Tahap aktif boleh
+/// diberi label fase dari halaman ([activeStatus], mis. "Di keranjang").
 class MissionLadder extends StatelessWidget {
-  /// Creates the ladder.
+  /// Membuat tangga untuk [stages] dengan [issuedCount] voucher terbit.
   const MissionLadder({
     super.key,
     required this.stages,
     required this.issuedCount,
     this.pendingNote,
+    this.activeStatus,
+    this.activeTone = StatusTone.brand,
   });
 
-  /// Stages in order; the first one is active until its voucher is issued.
+  /// Tahap kampanye berurutan.
   final List<MissionStage> stages;
 
-  /// Number of stage vouchers issued so far.
+  /// Jumlah voucher misi yang sudah terbit.
   final int issuedCount;
 
-  /// Optional note under the active stage.
+  /// Catatan pesanan berjalan, tampil di bawah tahap aktif saja.
   final String? pendingNote;
+
+  /// Label status tahap aktif. Bawaan "Aktif".
+  final String? activeStatus;
+
+  /// Nada pil status tahap aktif.
+  final StatusTone activeTone;
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
-    final int issued = issuedCount < 0 ? 0 : issuedCount;
-    final bool finished =
-        stages.isNotEmpty && allStagesDone(stages: stages, issuedCount: issued);
-    final List<Widget> rows = <Widget>[];
-    for (int index = 0; index < stages.length; index++) {
-      final StageStatus status = stageStatus(
-        stageIndex: index,
-        issuedCount: issued,
-      );
-      rows.add(
-        MergeSemantics(
-          child: _TimelineRow(
-            indicator: _StageIndicator(
-              number: stages[index].number,
-              status: status,
-            ),
-            incomingColor: index == 0
-                ? null
-                : _lineColor(
-                    scheme,
-                    stageStatus(stageIndex: index - 1, issuedCount: issued),
-                  ),
-            outgoingColor: _lineColor(scheme, status),
-            child: _StageCard(
-              stage: stages[index],
-              status: status,
-              previousStageNumber: index == 0 ? null : stages[index - 1].number,
-              pendingNote: status == StageStatus.active ? pendingNote : null,
-            ),
-          ),
-        ),
-      );
-    }
-    rows.add(
-      _TimelineRow(
-        indicator: _CampaignIndicator(finished: finished),
-        incomingColor: stages.isEmpty
-            ? null
-            : _lineColor(
-                scheme,
-                stageStatus(stageIndex: stages.length - 1, issuedCount: issued),
-              ),
-        bottomGap: 0,
-        child: _CampaignNote(finished: finished),
-      ),
+    final bool allDone = allStagesDone(
+      stages: stages,
+      issuedCount: issuedCount,
     );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: rows,
-    );
-  }
-}
-
-Color _lineColor(ColorScheme scheme, StageStatus status) =>
-    status == StageStatus.completed ? scheme.primary : scheme.outlineVariant;
-
-class _TimelineRow extends StatelessWidget {
-  const _TimelineRow({
-    required this.indicator,
-    required this.child,
-    this.incomingColor,
-    this.outgoingColor,
-    this.bottomGap = _rowGap,
-  });
-
-  final Widget indicator;
-  final Widget child;
-  final Color? incomingColor;
-  final Color? outgoingColor;
-  final double bottomGap;
-
-  static const double _lineStart = (_indicatorSize - _lineWidth) / 2;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color? incoming = incomingColor;
-    final Color? outgoing = outgoingColor;
-    return Stack(
-      clipBehavior: Clip.none,
       children: <Widget>[
-        if (incoming != null)
-          PositionedDirectional(
-            start: _lineStart,
-            top: 0,
-            width: _lineWidth,
-            height: _indicatorTop - _lineGap,
-            child: ColoredBox(color: incoming),
+        if (stages.isNotEmpty) ...<Widget>[
+          ExcludeSemantics(
+            child: _StageTrack(stages: stages, issuedCount: issuedCount),
           ),
-        if (outgoing != null)
-          PositionedDirectional(
-            start: _lineStart,
-            top: _indicatorTop + _indicatorSize + _lineGap,
-            bottom: 0,
-            width: _lineWidth,
-            child: ColoredBox(color: outgoing),
+          const SizedBox(height: 14),
+        ],
+        for (int index = 0; index < stages.length; index++) ...<Widget>[
+          _StageCard(
+            stage: stages[index],
+            previous: index == 0 ? null : stages[index - 1],
+            status: stageStatus(stageIndex: index, issuedCount: issuedCount),
+            pendingNote: pendingNote,
+            activeStatus: activeStatus ?? 'Aktif',
+            activeTone: activeTone,
           ),
-        Padding(
-          padding: EdgeInsets.only(bottom: bottomGap),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.only(top: _indicatorTop),
-                child: SizedBox.square(
-                  dimension: _indicatorSize,
-                  child: ExcludeSemantics(child: indicator),
+          const SizedBox(height: 10),
+        ],
+        Row(
+          children: <Widget>[
+            Icon(
+              allDone && stages.isNotEmpty
+                  ? Icons.emoji_events_rounded
+                  : Icons.more_horiz_rounded,
+              size: 18,
+              color: scheme.onSurfaceVariant,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                allDone && stages.isNotEmpty
+                    ? 'Semua tahap selesai. Tahap berikutnya menunggu kampanye.'
+                    : 'Tahap berikutnya menunggu kampanye',
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 16 / 12,
+                  color: scheme.onSurfaceVariant,
                 ),
               ),
-              const SizedBox(width: _contentGap),
-              Expanded(child: child),
-            ],
-          ),
+            ),
+          ],
         ),
       ],
     );
   }
 }
 
-class _StageIndicator extends StatelessWidget {
-  const _StageIndicator({required this.number, required this.status});
+class _StageTrack extends StatelessWidget {
+  const _StageTrack({required this.stages, required this.issuedCount});
 
-  final int number;
-  final StageStatus status;
+  final List<MissionStage> stages;
+  final int issuedCount;
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme scheme = theme.colorScheme;
-    return switch (status) {
-      StageStatus.completed => DecoratedBox(
-        decoration: BoxDecoration(
-          color: scheme.primary,
-          shape: BoxShape.circle,
-        ),
-        child: Center(
-          child: Icon(Icons.check_rounded, size: 18, color: scheme.onPrimary),
-        ),
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final int nodes = stages.length + 1;
+    Widget line(bool done) => Expanded(
+      child: SizedBox(
+        height: 4,
+        child: ColoredBox(color: done ? scheme.primary : scheme.outlineVariant),
       ),
-      StageStatus.active => DecoratedBox(
+    );
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        for (int index = 0; index < nodes; index++)
+          Expanded(
+            child: Column(
+              children: <Widget>[
+                SizedBox(
+                  height: 44,
+                  child: Row(
+                    children: <Widget>[
+                      if (index == 0)
+                        const Spacer()
+                      else
+                        line(index - 1 < issuedCount),
+                      _StageNode(
+                        number: index + 1,
+                        status: index < stages.length
+                            ? stageStatus(
+                                stageIndex: index,
+                                issuedCount: issuedCount,
+                              )
+                            : null,
+                      ),
+                      if (index == nodes - 1)
+                        const Spacer()
+                      else
+                        line(index < issuedCount),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  index < stages.length
+                      ? rupiah(stages[index].voucherAmount)
+                      : 'Segera',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 16 / 12,
+                    fontWeight: index == issuedCount
+                        ? FontWeight.w700
+                        : FontWeight.w500,
+                    color: index == issuedCount && index < stages.length
+                        ? scheme.onSurface
+                        : scheme.onSurfaceVariant,
+                    fontFeatures: const <FontFeature>[
+                      FontFeature.tabularFigures(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _StageNode extends StatelessWidget {
+  const _StageNode({required this.number, required this.status});
+
+  final int number;
+
+  /// `null` = simpul "Segera" (tahap kampanye berikutnya).
+  final StageStatus? status;
+
+  @override
+  Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final MissionTones tones = MissionTones.of(context);
+    const double size = 40;
+    return switch (status) {
+      StageStatus.completed => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(color: tones.success, shape: BoxShape.circle),
+        child: Icon(Icons.check_rounded, color: scheme.surface, size: 24),
+      ),
+      StageStatus.active => Container(
+        width: size + 4,
+        height: size + 4,
         decoration: BoxDecoration(
-          color: scheme.surfaceContainerLowest,
+          gradient: FestivePalette.candy,
           shape: BoxShape.circle,
-          border: Border.all(color: scheme.primary, width: 2),
-          boxShadow: <BoxShadow>[
+          border: Border.all(color: FestivePalette.goldLight, width: 3),
+          boxShadow: const <BoxShadow>[
             BoxShadow(
-              color: scheme.primary.withValues(alpha: 0.28),
-              blurRadius: 12,
-              spreadRadius: 2,
+              color: Color(0x40D81F57),
+              blurRadius: 10,
+              offset: Offset(0, 3),
             ),
           ],
         ),
-        child: Center(
-          child: Text(
-            '$number',
-            textScaler: TextScaler.noScaling,
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: scheme.primary,
-              fontWeight: FontWeight.w700,
-            ),
+        alignment: Alignment.center,
+        child: Text(
+          '$number',
+          textScaler: TextScaler.noScaling,
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+            color: Colors.white,
           ),
         ),
       ),
-      StageStatus.locked => DecoratedBox(
+      StageStatus.locked => Container(
+        width: size,
+        height: size,
         decoration: BoxDecoration(
-          color: scheme.outlineVariant,
+          color: scheme.surfaceContainerHighest,
           shape: BoxShape.circle,
+          border: Border.all(color: scheme.outlineVariant),
         ),
-        child: Center(
-          child: Icon(
-            Icons.lock_rounded,
-            size: 16,
-            color: scheme.onSurfaceVariant,
-          ),
+        child: Icon(
+          Icons.lock_rounded,
+          color: scheme.onSurfaceVariant,
+          size: 18,
+        ),
+      ),
+      null => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: scheme.surface,
+          shape: BoxShape.circle,
+          border: Border.all(color: scheme.outlineVariant, width: 1.5),
+        ),
+        padding: const EdgeInsets.all(7),
+        child: const Opacity(
+          opacity: 0.55,
+          child: Image(image: MissionArt.flag, fit: BoxFit.contain),
         ),
       ),
     };
@@ -237,277 +251,212 @@ class _StageIndicator extends StatelessWidget {
 class _StageCard extends StatelessWidget {
   const _StageCard({
     required this.stage,
+    required this.previous,
     required this.status,
-    required this.previousStageNumber,
     required this.pendingNote,
+    required this.activeStatus,
+    required this.activeTone,
   });
 
   final MissionStage stage;
+  final MissionStage? previous;
   final StageStatus status;
-  final int? previousStageNumber;
   final String? pendingNote;
+  final String activeStatus;
+  final StatusTone activeTone;
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme scheme = theme.colorScheme;
-    final bool locked = status == StageStatus.locked;
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    final MissionTones tones = MissionTones.of(context);
     final bool active = status == StageStatus.active;
-    final Color textColor = locked ? scheme.onSurfaceVariant : scheme.onSurface;
-    final int? previous = previousStageNumber;
-    final String? note = pendingNote;
-    final String requirementAmount = rupiah(stage.minOrderSubtotal);
-    final String voucherAmount = rupiah(stage.voucherAmount);
-    final String minSpend = rupiah(stage.voucherMinSpend);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: locked
-            ? scheme.surfaceContainerLow
-            : scheme.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: active ? scheme.primary : scheme.outlineVariant,
-          width: active ? 1.5 : 1,
-        ),
-        boxShadow: active
-            ? <BoxShadow>[
-                BoxShadow(
-                  color: scheme.primary.withValues(alpha: 0.10),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                ),
-              ]
-            : null,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: <Widget>[
-                Text(
-                  'Tahap ${stage.number}',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: textColor,
-                    fontWeight: FontWeight.w700,
+    final String? note = active ? pendingNote : null;
+    final String lockNote =
+        'Terbuka setelah voucher ${previous?.title ?? 'tahap sebelumnya'} '
+        'terbit';
+    final String statusLabel = switch (status) {
+      StageStatus.completed => 'Selesai',
+      StageStatus.active => activeStatus,
+      StageStatus.locked => 'Terkunci',
+    };
+    final String target =
+        'Belanja produk misi min. ${rupiah(stage.minOrderSubtotal)} '
+        'dalam 1 pesanan';
+    final String reward =
+        'Voucher ${rupiah(stage.voucherAmount)} · min. belanja '
+        '${rupiah(stage.voucherMinSpend)} · berlaku '
+        '${stage.voucherValidDays} hari';
+    final StringBuffer summary = StringBuffer()
+      ..write('${stage.title}, $statusLabel. ')
+      ..write(
+        'Belanja produk misi minimal ${rupiah(stage.minOrderSubtotal)} '
+        'dalam 1 pesanan. ',
+      )
+      ..write(
+        'Hadiah voucher ${rupiah(stage.voucherAmount)}, minimal belanja '
+        '${rupiah(stage.voucherMinSpend)}, berlaku '
+        '${stage.voucherValidDays} hari.',
+      );
+    if (status == StageStatus.locked) summary.write(' $lockNote.');
+    if (note != null) summary.write(' $note');
+    final Color muted = scheme.onSurfaceVariant;
+    return MergeSemantics(
+      child: Semantics(
+        label: summary.toString(),
+        child: ExcludeSemantics(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: active ? scheme.surface : scheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: active ? scheme.primary : scheme.outlineVariant,
+                width: active ? 1.5 : 1,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: <Widget>[
+                      Text(
+                        stage.title,
+                        style: TextStyle(
+                          fontSize: 14,
+                          height: 20 / 14,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSurface,
+                        ),
+                      ),
+                      StatusPill(
+                        label: statusLabel,
+                        tone: switch (status) {
+                          StageStatus.completed => StatusTone.success,
+                          StageStatus.active => activeTone,
+                          StageStatus.locked => StatusTone.neutral,
+                        },
+                        icon: switch (status) {
+                          StageStatus.completed => Icons.check_circle_rounded,
+                          StageStatus.active => null,
+                          StageStatus.locked => Icons.lock_rounded,
+                        },
+                      ),
+                    ],
                   ),
-                ),
-                _StagePill(status: status),
-              ],
-            ),
-            const SizedBox(height: 10),
-            _DetailLine(
-              icon: Icons.shopping_bag_outlined,
-              color: textColor,
-              semanticsLabel:
-                  'Syarat: selesaikan 1 pesanan minimal $requirementAmount',
-              spans: <InlineSpan>[
-                const TextSpan(text: 'Selesaikan 1 pesanan min. '),
-                TextSpan(
-                  text: requirementAmount,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            _DetailLine(
-              icon: Icons.confirmation_number_outlined,
-              color: textColor,
-              semanticsLabel:
-                  'Hadiah: voucher $voucherAmount, minimal belanja $minSpend, '
-                  'berlaku ${stage.voucherValidDays} hari',
-              spans: <InlineSpan>[
-                const TextSpan(text: 'Voucher '),
-                TextSpan(
-                  text: voucherAmount,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-                TextSpan(
-                  text:
-                      ' · min. belanja $minSpend · berlaku '
-                      '${stage.voucherValidDays} hari',
-                ),
-              ],
-            ),
-            if (locked && previous != null) ...<Widget>[
-              const SizedBox(height: 6),
-              _DetailLine(
-                icon: Icons.lock_outline_rounded,
-                color: scheme.onSurfaceVariant,
-                spans: <InlineSpan>[
-                  TextSpan(
-                    text: 'Terbuka setelah voucher Tahap $previous terbit',
+                  const SizedBox(height: 4),
+                  Text(
+                    target,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 18 / 13,
+                      color: active ? scheme.onSurface : muted,
+                    ),
                   ),
+                  const SizedBox(height: 8),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: tones.goldTint,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(6, 6, 10, 6),
+                      child: Row(
+                        children: <Widget>[
+                          Opacity(
+                            opacity: status == StageStatus.locked ? 0.6 : 1,
+                            child: const Image(
+                              image: MissionArt.ticket,
+                              width: 30,
+                              height: 30,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              reward,
+                              style: TextStyle(
+                                fontSize: 12,
+                                height: 16 / 12,
+                                fontWeight: FontWeight.w600,
+                                color: tones.onGoldTint,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (status == StageStatus.locked) ...<Widget>[
+                    const SizedBox(height: 8),
+                    _NoteRow(
+                      icon: Icons.lock_clock_rounded,
+                      text: lockNote,
+                      color: muted,
+                    ),
+                  ],
+                  if (note != null) ...<Widget>[
+                    const SizedBox(height: 8),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: tones.infoTint,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: _NoteRow(
+                          icon: Icons.local_shipping,
+                          text: note,
+                          color: tones.info,
+                          textColor: scheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
-            ],
-            if (active && note != null) ...<Widget>[
-              const SizedBox(height: 12),
-              _PendingNote(text: note),
-            ],
-          ],
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-class _StagePill extends StatelessWidget {
-  const _StagePill({required this.status});
-
-  final StageStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-    return switch (status) {
-      StageStatus.completed => StatusPill(
-        label: 'Selesai',
-        background: scheme.primaryContainer,
-        foreground: scheme.onPrimaryContainer,
-      ),
-      StageStatus.active => StatusPill(
-        label: 'Aktif',
-        background: scheme.primary,
-        foreground: scheme.onPrimary,
-      ),
-      StageStatus.locked => StatusPill(
-        label: 'Terkunci',
-        background: scheme.outlineVariant,
-        foreground: scheme.onSurfaceVariant,
-      ),
-    };
-  }
-}
-
-class _DetailLine extends StatelessWidget {
-  const _DetailLine({
+class _NoteRow extends StatelessWidget {
+  const _NoteRow({
     required this.icon,
+    required this.text,
     required this.color,
-    required this.spans,
-    this.semanticsLabel,
+    this.textColor,
   });
 
   final IconData icon;
+  final String text;
   final Color color;
-  final List<InlineSpan> spans;
-  final String? semanticsLabel;
+  final Color? textColor;
 
   @override
   Widget build(BuildContext context) {
-    final TextStyle? style = Theme.of(
-      context,
-    ).textTheme.bodyMedium?.copyWith(color: color);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Padding(
-          padding: EdgeInsets.only(
-            top: _firstLineIconTop(context, style, _detailIconSize),
-          ),
-          child: Icon(icon, size: _detailIconSize, color: color),
-        ),
-        const SizedBox(width: 8),
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 6),
         Expanded(
-          child: Text.rich(
-            TextSpan(children: spans),
-            style: style,
-            semanticsLabel: semanticsLabel,
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              height: 16 / 12,
+              color: textColor ?? color,
+            ),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _PendingNote extends StatelessWidget {
-  const _PendingNote({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    final ColorScheme scheme = theme.colorScheme;
-    final TextStyle? style = theme.textTheme.bodySmall?.copyWith(
-      color: scheme.onTertiaryContainer,
-    );
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: scheme.tertiaryContainer,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Padding(
-              padding: EdgeInsets.only(
-                top: _firstLineIconTop(context, style, _detailIconSize),
-              ),
-              child: Icon(
-                Icons.local_shipping,
-                size: _detailIconSize,
-                color: scheme.onTertiaryContainer,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(child: Text(text, style: style)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CampaignIndicator extends StatelessWidget {
-  const _CampaignIndicator({required this.finished});
-
-  final bool finished;
-
-  @override
-  Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: scheme.outlineVariant, width: 1.5),
-      ),
-      child: Center(
-        child: Icon(
-          finished ? Icons.emoji_events_outlined : Icons.more_horiz_rounded,
-          size: 16,
-          color: scheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-}
-
-class _CampaignNote extends StatelessWidget {
-  const _CampaignNote({required this.finished});
-
-  final bool finished;
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: 18),
-      child: Text(
-        finished
-            ? 'Semua tahap selesai. Tahap berikutnya menunggu kampanye.'
-            : 'Tahap berikutnya menunggu kampanye',
-        style: theme.textTheme.bodyMedium?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
-      ),
     );
   }
 }

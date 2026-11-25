@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:misi_belanja/misi_belanja.dart';
 
+import 'support/host_theme.dart';
 import 'support/test_app.dart';
 import 'support/v2_fixtures.dart';
 
@@ -31,6 +32,8 @@ Future<void> _pumpLadder(
 String _stageLabel(WidgetTester tester, int number) =>
     tester.getSemantics(find.text('Tahap $number')).label;
 
+final ColorScheme _scheme = hostColorScheme(Brightness.light);
+
 Finder _connectors(Color color) => find.descendant(
   of: find.byType(MissionLadder),
   matching: find.byWidgetPredicate(
@@ -48,12 +51,18 @@ void main() {
     expect(find.text('Aktif'), findsOneWidget);
     expect(find.text('Terkunci'), findsOneWidget);
     expect(find.text('Selesai'), findsNothing);
-    expect(find.text('Selesaikan 1 pesanan min. Rp75.000'), findsOneWidget);
+    expect(
+      find.text('Belanja produk misi min. Rp75.000 dalam 1 pesanan'),
+      findsOneWidget,
+    );
     expect(
       find.text('Voucher Rp10.000 · min. belanja Rp100.000 · berlaku 30 hari'),
       findsOneWidget,
     );
-    expect(find.text('Selesaikan 1 pesanan min. Rp100.000'), findsOneWidget);
+    expect(
+      find.text('Belanja produk misi min. Rp100.000 dalam 1 pesanan'),
+      findsOneWidget,
+    );
     expect(
       find.text('Voucher Rp5.000 · min. belanja Rp100.000 · berlaku 30 hari'),
       findsOneWidget,
@@ -116,8 +125,8 @@ void main() {
   ) async {
     await _pumpLadder(tester, 1);
 
-    expect(_connectors(brandLightScheme.primary), findsNWidgets(2));
-    expect(_connectors(brandLightScheme.outlineVariant), findsNWidgets(2));
+    expect(_connectors(_scheme.primary), findsNWidgets(2));
+    expect(_connectors(_scheme.outlineVariant), findsNWidgets(2));
   });
 
   testWidgets('satu MergeSemantics per tahap', (WidgetTester tester) async {

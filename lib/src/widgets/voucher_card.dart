@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../kit/festive_palette.dart';
 import '../mission_voucher.dart';
 import '../rupiah.dart';
 import '../wib_date.dart';
@@ -62,15 +63,20 @@ class VoucherCard extends StatelessWidget {
     final bool active = state == _VoucherState.active;
     final bool rtl = Directionality.of(context) == TextDirection.rtl;
     final String amount = rupiah(voucher.amount);
-    final TextStyle labelStyle =
-        (theme.textTheme.labelMedium ?? const TextStyle()).copyWith(
-          color: scheme.onSurfaceVariant,
-        );
-    final TextStyle amountStyle =
-        (theme.textTheme.headlineSmall ?? const TextStyle()).copyWith(
-          color: active ? scheme.primary : scheme.onSurfaceVariant,
-          fontWeight: FontWeight.w800,
-        );
+    final Color stubInk = active ? Colors.white : scheme.onSurfaceVariant;
+    final TextStyle labelStyle = TextStyle(
+      fontSize: 12,
+      height: 16 / 12,
+      fontWeight: FontWeight.w600,
+      color: stubInk,
+    );
+    final TextStyle amountStyle = TextStyle(
+      fontSize: 24,
+      height: 30 / 24,
+      fontWeight: FontWeight.w800,
+      color: stubInk,
+      fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+    );
     final Size stubContent = _measureStub(
       context,
       amount: amount,
@@ -107,6 +113,7 @@ class VoucherCard extends StatelessWidget {
                   height: stubHeight,
                   child: _VoucherStub(
                     amount: amount,
+                    active: active,
                     labelStyle: labelStyle,
                     amountStyle: amountStyle,
                     padding: _topStubPadding,
@@ -131,6 +138,7 @@ class VoucherCard extends StatelessWidget {
                   width: stubWidth,
                   child: _VoucherStub(
                     amount: amount,
+                    active: active,
                     labelStyle: labelStyle,
                     amountStyle: amountStyle,
                     padding: _sideStubPadding,
@@ -144,15 +152,13 @@ class VoucherCard extends StatelessWidget {
             foregroundPainter: TicketOutlinePainter(
               axis: axis,
               divider: divider,
-              borderColor: scheme.outlineVariant,
+              borderColor: active ? scheme.primary : scheme.outlineVariant,
               dashColor: scheme.outline.withValues(alpha: 0.6),
             ),
             child: ClipPath(
               clipper: TicketClipper(axis: axis, divider: divider),
               child: ColoredBox(
-                color: active
-                    ? scheme.surfaceContainerLowest
-                    : scheme.surfaceContainerLow,
+                color: active ? scheme.surface : scheme.surfaceContainerHighest,
                 child: Material(type: MaterialType.transparency, child: body),
               ),
             ),
@@ -215,36 +221,84 @@ String _summary(MissionVoucher voucher, _VoucherState state) {
 class _VoucherStub extends StatelessWidget {
   const _VoucherStub({
     required this.amount,
+    required this.active,
     required this.labelStyle,
     required this.amountStyle,
     required this.padding,
   });
 
   final String amount;
+  final bool active;
   final TextStyle labelStyle;
   final TextStyle amountStyle;
   final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
+    final ColorScheme scheme = Theme.of(context).colorScheme;
     return ExcludeSemantics(
-      child: Padding(
-        padding: padding,
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: AlignmentDirectional.centerStart,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Text('Voucher', style: labelStyle),
-              Text(amount, style: amountStyle),
-            ],
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: active
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: <Color>[
+                    FestivePalette.candyBottom,
+                    FestivePalette.candyLip,
+                  ],
+                )
+              : null,
+          color: active ? null : scheme.outlineVariant.withValues(alpha: 0.5),
+        ),
+        child: CustomPaint(
+          painter: active ? const _DotsPainter() : null,
+          child: Padding(
+            padding: padding,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: AlignmentDirectional.centerStart,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text('Voucher', style: labelStyle),
+                  Text(amount, style: amountStyle),
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+/// Bintik putih tipis di stub aktif, supaya kupon terasa seperti tiket pesta.
+class _DotsPainter extends CustomPainter {
+  const _DotsPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint dot = Paint()..color = const Color(0x1FFFFFFF);
+    const double gap = 14;
+    int row = 0;
+    for (double y = 6; y < size.height; y += gap) {
+      final double shift = row.isEven ? 0 : gap / 2;
+      for (double x = 6 + shift; x < size.width; x += gap) {
+        canvas.drawCircle(Offset(x, y), 2, dot);
+      }
+      row += 1;
+    }
+    canvas.drawCircle(
+      Offset(size.width * 0.92, size.height * 0.05),
+      size.shortestSide * 0.45,
+      Paint()..color = const Color(0x14FFFFFF),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_DotsPainter oldDelegate) => false;
 }
 
 class _VoucherDetails extends StatelessWidget {
@@ -272,7 +326,10 @@ class _VoucherDetails extends StatelessWidget {
           ExcludeSemantics(
             child: Text(
               'Min. belanja ${rupiah(voucher.minSpend)}',
-              style: theme.textTheme.titleSmall?.copyWith(
+              style: TextStyle(
+                fontSize: 14,
+                height: 20 / 14,
+                fontWeight: FontWeight.w600,
                 color: state == _VoucherState.active
                     ? scheme.onSurface
                     : scheme.onSurfaceVariant,
@@ -283,7 +340,9 @@ class _VoucherDetails extends StatelessWidget {
           ExcludeSemantics(
             child: Text(
               'Berlaku s.d. ${formatWibDateShort(voucher.expiresDay)}',
-              style: theme.textTheme.bodySmall?.copyWith(
+              style: TextStyle(
+                fontSize: 12,
+                height: 16 / 12,
                 color: scheme.onSurfaceVariant,
               ),
             ),
@@ -299,7 +358,17 @@ class _VoucherDetails extends StatelessWidget {
               if (use != null)
                 TextButton(
                   onPressed: use,
-                  style: TextButton.styleFrom(minimumSize: const Size(64, 48)),
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(72, 48),
+                    foregroundColor: scheme.onPrimary,
+                    backgroundColor: scheme.primary,
+                    shape: const StadiumBorder(),
+                    textStyle: theme.textTheme.labelLarge?.copyWith(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                  ),
                   child: Text(
                     'Pakai',
                     semanticsLabel: 'Pakai voucher ${rupiah(voucher.amount)}',
@@ -320,25 +389,21 @@ class _VoucherPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
     return switch (state) {
-      _VoucherState.active => StatusPill(
+      _VoucherState.active => const StatusPill(
         label: 'Aktif',
+        tone: StatusTone.success,
         icon: Icons.event_available_outlined,
-        background: scheme.primary,
-        foreground: scheme.onPrimary,
       ),
-      _VoucherState.used => StatusPill(
+      _VoucherState.used => const StatusPill(
         label: 'Terpakai',
+        tone: StatusTone.neutral,
         icon: Icons.check_circle_outline_rounded,
-        background: scheme.secondaryContainer,
-        foreground: scheme.onSecondaryContainer,
       ),
-      _VoucherState.expired => StatusPill(
+      _VoucherState.expired => const StatusPill(
         label: 'Kedaluwarsa',
+        tone: StatusTone.neutral,
         icon: Icons.event_busy_outlined,
-        background: scheme.outlineVariant,
-        foreground: scheme.onSurfaceVariant,
       ),
     };
   }
