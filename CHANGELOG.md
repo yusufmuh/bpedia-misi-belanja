@@ -1,5 +1,27 @@
 # Changelog · misi_belanja
 
+## 3.0.0 · halaman game (26 Nov 2026)
+
+Halaman Misi Belanja v3 (K4, SPEC-V3 §6.3) di atas aturan 3.0.0.
+
+### Ditambahkan
+
+- `MissionProduct`, `MissionPendingOrder`, `MissionCelebration`, `MissionPhase`, `MissionViewState` (tak-berubah; progres diturunkan dengan `missionProgress`) dan `MissionController` abstrak.
+- `LocalMissionController`: pengendali memori dengan simulasi pesanan (checkout, kirim, selesai, batal), ganti hari, masuk/keluar, catatan navigasi.
+- `MissionsPage`: hero pesta dengan Bipy berjalan, kartu tahap aktif + kupon hadiah + bar progres, grid produk misi (pita "Misi", tambah cepat, stepper, chip kategori), tangga tahap, voucher, cara main, aturan, bar bawah menempel, tamu "Masuk untuk ikut misi".
+- Animasi: tas terbang ke keranjang, bar progres beranimasi dan berdenyut, konfeti saat target tercapai, lembar "Misi tuntas" (`showMissionCompleteSheet`, `TicketDrop`, `MissionWaveCompanion`).
+- Widget: `MissionProgressTrack`, `MissionProductCard`, `QtyStepper`, `MissionHowTo`, `LivelyPose`, `StatusTone`.
+- Aset: `assets/bipy/` (jalan, sapa, pose belanja/pesta/semangat), `assets/art/` (bag, ticket, flag, coin), `assets/fx/` (stiker) dengan `MissionArt` dan `MissionSprites`; kit pesta di `lib/src/kit/`.
+- `example/`: app contoh dengan panel uji (masuk, status pesanan, hari, tema, kurangi gerak).
+- Tangkap layar `docs/shots/`.
+
+### Diubah
+
+- `MissionLadder` ditulis ulang: jalur tahap horizontal + kartu tiap tahap dengan kupon hadiah; teks target "Belanja produk misi min. … dalam 1 pesanan"; label status tahap aktif bisa diganti (`activeStatus`).
+- `VoucherCard` ditulis ulang bergaya tiket pesta (stub permen bertitik, tombol "Pakai" pil); perilaku tata letak dan Semantics v2 dipertahankan.
+- `StatusPill` memakai `StatusTone` (warna dari tema host + nada status SPEC §2.1.2).
+- `analysis_options.yaml`: `lib/src/kit/**` dan `build/**` dikecualikan.
+
 ## 3.0.0 · aturan (25 Nov 2026)
 
 Perluasan aturan murni untuk Bpedia Demo v3 (produk misi, K4). Semua

@@ -255,7 +255,6 @@ class _MissionsPageState extends State<MissionsPage> {
                 child: _ActiveStagePanel(
                   state: state,
                   onLogin: _controller.openLogin,
-                  onShop: _controller.openShop,
                 ),
               ),
             ),
@@ -536,7 +535,7 @@ class _MissionHero extends StatelessWidget {
               ),
             ),
             Positioned.fill(
-              right: spriteHeight * 0.95,
+              right: spriteHeight * 1.2,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -619,15 +618,10 @@ class _Sticker extends StatelessWidget {
 }
 
 class _ActiveStagePanel extends StatelessWidget {
-  const _ActiveStagePanel({
-    required this.state,
-    required this.onLogin,
-    required this.onShop,
-  });
+  const _ActiveStagePanel({required this.state, required this.onLogin});
 
   final MissionViewState state;
   final VoidCallback onLogin;
-  final VoidCallback onShop;
 
   @override
   Widget build(BuildContext context) {
@@ -635,10 +629,7 @@ class _ActiveStagePanel extends StatelessWidget {
     final MissionTones tones = MissionTones.of(context);
     final MissionStage? stage = state.activeStage;
     if (stage == null) {
-      return _AllDoneCard(
-        voucherCount: state.activeVoucherCount,
-        onShop: onShop,
-      );
+      return _AllDoneCard(voucherCount: state.activeVoucherCount);
     }
     final MissionPhase phase = state.phase;
     final MissionPendingOrder? pending = state.pendingOrder;
@@ -849,10 +840,9 @@ class _GuestProgress extends StatelessWidget {
 }
 
 class _AllDoneCard extends StatelessWidget {
-  const _AllDoneCard({required this.voucherCount, required this.onShop});
+  const _AllDoneCard({required this.voucherCount});
 
   final int voucherCount;
-  final VoidCallback onShop;
 
   @override
   Widget build(BuildContext context) {
@@ -887,14 +877,6 @@ class _AllDoneCard extends StatelessWidget {
                     height: 18 / 13,
                     color: scheme.onSurfaceVariant,
                   ),
-                ),
-                TextButton(
-                  onPressed: onShop,
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(48, 48),
-                    padding: EdgeInsets.zero,
-                  ),
-                  child: const Text('Belanja lagi'),
                 ),
               ],
             ),

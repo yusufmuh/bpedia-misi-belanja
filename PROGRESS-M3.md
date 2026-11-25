@@ -9,10 +9,10 @@ Agen: M3. Repo: `bpedia-misi-belanja` (paket `misi_belanja`). Mulai 26 Nov 2026.
 - [x] T2 Widget v3: `MissionLadder`, `VoucherCard`, `StatusPill`, `MissionProgressTrack`, `MissionProductCard`, `MissionHowTo`, `LivelyPose` + 25 kasus widget v2 dibawa (lolos 26 Nov)
 - [x] T3 Halaman `MissionsPage` (hero, tahap, progres, grid produk, voucher, bar bawah, perayaan, tamu, kurangi gerak) + tes alur (186 tes lolos 26 Nov)
 - [x] T4 Tangkap layar terang + gelap, strip animasi, putaran lihat-perbaiki 1 (font tombol hilang karena `textStyle` tanpa keluarga font, bar bawah membungkus, judul hero/harga/tombol pada teks 200%, pesan menunggu, tautan pesanan ganda)
-- [ ] T5 Putaran lihat-perbaiki 2, pilihan ke `docs/shots/`
-- [ ] T6 `example/` (app + panel uji: hari, status, tema)
-- [ ] T7 Dokumen: README, PRD v3, CHANGELOG 3.0.0
-- [ ] T8 `flutter analyze` 0 isu, `flutter test --concurrency=3` penuh, commit lokal
+- [x] T5 Putaran lihat-perbaiki 2 (bar bawah dibagi 5:6, teks hero tak menabrak tas, tautan ganda di kartu tuntas dihapus; dibandingkan dengan rujukan Tokopedia 15.28.08 (2) dan Blibli 15.25.00 (2)), 12 JPG di `docs/shots/`
+- [x] T6 `example/` (app + panel uji: masuk, status pesanan, hari, tema, kurangi gerak; tombol kembali membuka panel; 3 tes di `example/test`)
+- [x] T7 Dokumen: README, PRD v3, CHANGELOG 3.0.0
+- [x] T8 `flutter analyze` 0 isu, `flutter test --concurrency=3` 186 lolos (+3 di `example/`), commit lokal (26 Nov)
 
 ## Keputusan
 
@@ -28,3 +28,9 @@ Agen: M3. Repo: `bpedia-misi-belanja` (paket `misi_belanja`). Mulai 26 Nov 2026.
 1. `git log --oneline` dan daftar tonggak di atas.
 2. Iterasi: `flutter test --concurrency=3 test/<berkas>`; tangkap layar: `flutter test --concurrency=3 test/shots`; lihat PNG di `build/shots/`.
 3. Tes penuh hanya di tonggak: `flutter analyze` lalu `flutter test --concurrency=3`.
+
+## Catatan untuk kit (tidak diubah, dicatat untuk orkestrator)
+
+- `ResultSheet`: panel lembar tidak bisa digulir ke tombol aksi bila teks sangat panjang (di tes dengan font cadangan, tombol "Lihat voucher" berada di luar layar 844 dp dan `ensureVisible` tidak menggulirnya). Dengan Poppins di 390x844 semua terlihat.
+- `CoinFlightController` tidak punya `dispose` (bukan `ChangeNotifier`); README kit tidak menyebutnya, jadi pemakai bisa mengira perlu dibuang.
+- `dart format lib test` di modul ikut memformat ulang kit dan `test/support/shot.dart` (gaya format berbeda); format hanya berkas milik modul.
