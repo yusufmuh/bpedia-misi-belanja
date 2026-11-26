@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:misi_belanja/misi_belanja.dart';
-import 'package:misi_belanja/src/kit/kit.dart' show CandyButton;
+import 'package:misi_belanja/src/kit/kit.dart'
+    show CandyButton, CandyVariant, Pressable;
 
 import 'support/mission_harness.dart';
 
@@ -35,6 +36,11 @@ Finder _addButtonOf(String name) => find.descendant(
   matching: find.text('Keranjang'),
 );
 
+Finder _reward(String amount) => find.descendant(
+  of: find.byKey(const ValueKey<String>('mission-reward')),
+  matching: find.text(amount),
+);
+
 Future<void> _scrollTo(WidgetTester tester, Finder finder) async {
   await tester.scrollUntilVisible(
     finder,
@@ -52,11 +58,12 @@ void main() {
     await _pump(tester, localController());
     expect(find.text('Misi Belanja'), findsWidgets);
     expect(find.text('Tahap 1 dari 2'), findsOneWidget);
-    expect(find.text('Voucher Rp10.000'), findsOneWidget);
+    expect(_reward('Rp10.000'), findsOneWidget);
     expect(find.text('Belum mulai'), findsWidgets);
+    await _scrollTo(tester, find.text('6 produk'));
     expect(find.text('Produk misi'), findsWidgets);
     expect(find.text('6 produk'), findsOneWidget);
-    expect(find.text('Lihat keranjang'), findsOneWidget);
+    expect(find.widgetWithText(CandyButton, 'Keranjang'), findsOneWidget);
   });
 
   testWidgets('tamu: aksi utama Masuk dan progres disembunyikan', (
@@ -87,7 +94,7 @@ void main() {
     expect(controller.state.quantityOf('P39A06S01000021'), 1);
     expect(controller.log, contains('cue:tap'));
     expect(controller.state.phase, MissionPhase.inCart);
-    expect(find.text('Kurang Rp57.200'), findsOneWidget);
+    expect(find.text('Tambah Rp57.200 lagi'), findsOneWidget);
   });
 
   testWidgets('target tercapai: Checkout, cue bonus, buka checkout', (
@@ -115,7 +122,7 @@ void main() {
       cart: <String, int>{'P39A06S01000021': 1},
     );
     await _pump(tester, controller);
-    await tester.tap(find.text('Lihat keranjang'));
+    await tester.tap(find.widgetWithText(CandyButton, 'Keranjang'));
     expect(controller.log.last, 'openCart');
   });
 
@@ -126,6 +133,10 @@ void main() {
       cart: <String, int>{'P39A06S01000021': 2},
     );
     await _pump(tester, controller);
+    await _scrollTo(
+      tester,
+      find.text('Animate Brightening Facial Wash 100 ml'),
+    );
     final Finder minus = find.byIcon(Icons.remove).first;
     await _scrollTo(tester, minus);
     await tester.tap(minus);
@@ -212,7 +223,7 @@ void main() {
     controller.completeOrder();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));
-    expect(find.text('Tahap 1 selesai'), findsOneWidget);
+    expect(find.text('Tahap 1 Misi Belanja selesai'), findsOneWidget);
     expect(find.text('Voucher Rp10.000 jadi milikmu'), findsOneWidget);
     expect(find.text('Lanjut tahap 2'), findsOneWidget);
     expect(controller.log, contains('cue:missionDone'));
@@ -222,7 +233,7 @@ void main() {
         .widget<CandyButton>(find.widgetWithText(CandyButton, 'Lihat voucher'))
         .onPressed!();
     await tester.pump(const Duration(milliseconds: 1500));
-    expect(find.text('Tahap 1 selesai'), findsNothing);
+    expect(find.text('Tahap 1 Misi Belanja selesai'), findsNothing);
     expect(find.text('Voucher kamu'), findsOneWidget);
     expect(find.byType(VoucherCard), findsOneWidget);
   });
@@ -243,7 +254,7 @@ void main() {
     await tester.tap(find.text('Lanjut tahap 2'));
     await tester.pump(const Duration(milliseconds: 1500));
     expect(find.text('Tahap 2 dari 2'), findsOneWidget);
-    expect(find.text('Voucher Rp15.000'), findsOneWidget);
+    expect(_reward('Rp15.000'), findsOneWidget);
   });
 
   testWidgets('voucher: Pakai memanggil useVoucher', (
@@ -344,7 +355,7 @@ void main() {
     for (int i = 0; i < 30; i++) {
       await tester.pump(const Duration(milliseconds: 100));
     }
-    expect(find.text('Tahap 1 selesai'), findsOneWidget);
+    expect(find.text('Tahap 1 Misi Belanja selesai'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
   });
@@ -394,5 +405,117 @@ void main() {
     );
     expect(find.bySemanticsLabel(RegExp('Lihat keranjang')), findsOneWidget);
     semantics.dispose();
+  });
+  group('tahap berjudul kustom', () {
+    final List<MissionStage> titled = <MissionStage>[
+      for (final MissionStage stage in harnessStages)
+        MissionStage(
+          number: stage.number,
+          title: stage.number == 1 ? 'Skincare Animate' : 'Glow Bareng',
+          minOrderSubtotal: stage.minOrderSubtotal,
+          voucherAmount: stage.voucherAmount,
+          voucherMinSpend: stage.voucherMinSpend,
+          voucherValidDays: stage.voucherValidDays,
+          productCodes: stage.productCodes,
+        ),
+    ];
+
+    testWidgets('chip hero memakai nomor tahap, bukan judul', (
+      WidgetTester tester,
+    ) async {
+      await _pump(tester, localController(stages: titled));
+      expect(find.text('Tahap 1 dari 2'), findsOneWidget);
+      expect(find.text('Skincare Animate dari 2'), findsNothing);
+      expect(find.text('Skincare Animate'), findsWidgets);
+    });
+
+    testWidgets('lembar tuntas: judul, berlaku, dan lanjut memakai nomor', (
+      WidgetTester tester,
+    ) async {
+      final LocalMissionController controller = localController(
+        stages: titled,
+        cart: <String, int>{'P39A06S01000007': 3},
+      );
+      controller.placeOrder();
+      await _pump(tester, controller);
+      controller.completeOrder();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      final MissionVoucher voucher = controller.state.vouchers.single;
+      expect(find.text('Tahap 1 Misi Belanja selesai'), findsOneWidget);
+      expect(find.text('Lanjut tahap 2'), findsOneWidget);
+      expect(find.text('Lanjut glow bareng'), findsNothing);
+      expect(
+        find.text('Berlaku s.d. ${formatWibDateShort(voucher.expiresDay)}'),
+        findsWidgets,
+      );
+      expect(
+        tester
+            .widget<CandyButton>(
+              find.widgetWithText(CandyButton, 'Lihat voucher'),
+            )
+            .variant,
+        CandyVariant.pink,
+      );
+    });
+  });
+
+  testWidgets('lembar tuntas tahap terakhir: tautan Nanti saja', (
+    WidgetTester tester,
+  ) async {
+    final LocalMissionController controller = localController(
+      issuedCount: 1,
+      cart: <String, int>{'P21F02C01000026': 3},
+    );
+    controller.placeOrder();
+    await _pump(tester, controller);
+    controller.completeOrder();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.text('Tahap 2 Misi Belanja selesai'), findsOneWidget);
+    expect(find.text('Nanti saja'), findsOneWidget);
+    tester
+        .widget<Pressable>(
+          find.ancestor(
+            of: find.text('Nanti saja'),
+            matching: find.byType(Pressable),
+          ),
+        )
+        .onTap!();
+    await tester.pump(const Duration(milliseconds: 1500));
+    expect(find.text('Tahap 2 Misi Belanja selesai'), findsNothing);
+  });
+
+  testWidgets('kartu atas memuat tangga tahap, seksi bawah tanpa duplikat', (
+    WidgetTester tester,
+  ) async {
+    await _pump(tester, localController(issuedCount: 1));
+    expect(find.byType(MissionStageTrack), findsOneWidget);
+    expect(find.text('Berjalan'), findsOneWidget);
+    expect(find.text('Segera hadir'), findsOneWidget);
+    final double trackTop = tester
+        .getTopLeft(find.byType(MissionStageTrack))
+        .dy;
+    expect(trackTop, lessThan(tester.getTopLeft(_reward('Rp15.000')).dy));
+  });
+
+  testWidgets('bilah lekat: Di keranjang dan Tambah X lagi, progres 4 dp', (
+    WidgetTester tester,
+  ) async {
+    await _pump(
+      tester,
+      localController(cart: <String, int>{'P39A06S01000021': 1}),
+    );
+    expect(find.textContaining('Kurang '), findsNothing);
+    expect(find.text('Di keranjang'), findsNWidgets(2));
+    expect(
+      find.textContaining(RegExp(r'^Tambah Rp[\d.]+ lagi$')),
+      findsOneWidget,
+    );
+    final Finder bar = find.byKey(
+      const ValueKey<String>('mission-bar-progress'),
+    );
+    expect(bar, findsOneWidget);
+    expect(tester.getSize(bar).height, 4);
   });
 }

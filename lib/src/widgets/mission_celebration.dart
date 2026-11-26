@@ -7,11 +7,15 @@ import '../kit/kit.dart';
 import '../mission_assets.dart';
 import '../mission_stage.dart';
 import '../mission_view.dart';
+import '../mission_voucher.dart';
 import '../rupiah.dart';
+import '../wib_date.dart';
 
 /// Menampilkan lembar "Misi tuntas" untuk [celebration]: kupon tiket jatuh
 /// dari atas dan memantul, konfeti, Bipy berjalan lalu melambai, nominal
-/// voucher naik dari nol, aksi "Lihat voucher" dan "Lanjut tahap N".
+/// voucher naik dari nol, masa berlaku bertanggal, aksi "Lihat voucher" dan
+/// "Lanjut tahap N" (tanpa tahap berikutnya: "Nanti saja"). Judul dan aksi
+/// sama dengan perayaan versi hub.
 ///
 /// [onSeeVoucher] dan [onNextStage] dipanggil setelah lembar ditutup.
 Future<void> showMissionCompleteSheet(
@@ -21,38 +25,41 @@ Future<void> showMissionCompleteSheet(
   VoidCallback? onNextStage,
 }) {
   final MissionStage stage = celebration.stage;
-  final MissionStage? next = celebration.nextStage;
-  final VoidCallback? nextAction = onNextStage;
+  final MissionStage? next = onNextStage == null ? null : celebration.nextStage;
+  final MissionVoucher voucher = celebration.voucher;
+  final String validUntil = formatWibDateShort(voucher.expiresDay);
   return showResultSheet<void>(
     context,
     builder: (BuildContext sheet) => ResultSheet(
       ribbon: 'Misi tuntas!',
-      title: '${stage.title} selesai',
+      title: 'Tahap ${stage.number} Misi Belanja selesai',
       pill: 'Voucher belanja',
       art: const SizedBox.square(dimension: 150, child: TicketDrop()),
       companion: const MissionWaveCompanion(height: 112),
-      amount: celebration.voucher.amount,
+      amount: voucher.amount,
       amountPrefix: 'Rp',
-      caption: 'Voucher ${rupiah(celebration.voucher.amount)} jadi milikmu',
+      caption: 'Voucher ${rupiah(voucher.amount)} jadi milikmu',
       message:
           'Pakai di checkout berikutnya (min. belanja '
-          '${rupiah(celebration.voucher.minSpend)}).',
-      note: 'Berlaku ${stage.voucherValidDays} hari',
-      primaryVariant: CandyVariant.gold,
+          '${rupiah(voucher.minSpend)}).',
+      note: 'Berlaku s.d. $validUntil',
+      primaryIcon: const Icon(
+        Icons.confirmation_number_rounded,
+        size: 20,
+        color: Colors.white,
+      ),
       primaryLabel: 'Lihat voucher',
       onPrimary: () {
         Navigator.of(sheet).pop();
         onSeeVoucher();
       },
-      secondaryLabel: next != null && nextAction != null
-          ? 'Lanjut ${next.title.toLowerCase()}'
-          : null,
-      onSecondary: next != null && nextAction != null
-          ? () {
-              Navigator.of(sheet).pop();
-              nextAction();
-            }
-          : null,
+      secondaryLabel: next == null
+          ? 'Nanti saja'
+          : 'Lanjut tahap ${next.number}',
+      onSecondary: () {
+        Navigator.of(sheet).pop();
+        if (next != null) onNextStage?.call();
+      },
     ),
   );
 }

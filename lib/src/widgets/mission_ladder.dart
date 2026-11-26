@@ -22,6 +22,7 @@ class MissionLadder extends StatelessWidget {
     this.pendingNote,
     this.activeStatus,
     this.activeTone = StatusTone.brand,
+    this.showTrack = true,
   });
 
   /// Tahap kampanye berurutan.
@@ -39,6 +40,10 @@ class MissionLadder extends StatelessWidget {
   /// Nada pil status tahap aktif.
   final StatusTone activeTone;
 
+  /// False menyembunyikan jalur tahap di atas kartu (mis. karena halaman
+  /// sudah menampilkan [MissionStageTrack] di kartu tahap aktif).
+  final bool showTrack;
+
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
@@ -49,9 +54,13 @@ class MissionLadder extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        if (stages.isNotEmpty) ...<Widget>[
+        if (showTrack && stages.isNotEmpty) ...<Widget>[
           ExcludeSemantics(
-            child: _StageTrack(stages: stages, issuedCount: issuedCount),
+            child: MissionStageTrack(
+              stages: stages,
+              issuedCount: issuedCount,
+              labels: MissionTrackLabels.amounts,
+            ),
           ),
           const SizedBox(height: 14),
         ],
@@ -95,77 +104,146 @@ class MissionLadder extends StatelessWidget {
   }
 }
 
-class _StageTrack extends StatelessWidget {
-  const _StageTrack({required this.stages, required this.issuedCount});
+/// Isi label di bawah tiap simpul [MissionStageTrack].
+enum MissionTrackLabels {
+  /// Nominal voucher tiap tahap ("Rp10.000", simpul akhir "Segera").
+  amounts,
 
+  /// "Tahap N" ditambah status ("Selesai", "Berjalan", "Terkunci",
+  /// simpul akhir "Segera hadir").
+  stages,
+}
+
+/// Jalur tahap horizontal: lingkaran 40 dp per tahap ditambah satu simpul
+/// tahap kampanye berikutnya, dihubungkan garis 4 dp.
+class MissionStageTrack extends StatelessWidget {
+  /// Membuat jalur untuk [stages] dengan [issuedCount] voucher terbit.
+  const MissionStageTrack({
+    super.key,
+    required this.stages,
+    required this.issuedCount,
+    this.labels = MissionTrackLabels.stages,
+  });
+
+  /// Tahap kampanye berurutan.
   final List<MissionStage> stages;
+
+  /// Jumlah voucher misi yang sudah terbit.
   final int issuedCount;
+
+  /// Isi label di bawah simpul.
+  final MissionTrackLabels labels;
+
+  static String _statusLabel(StageStatus? status) => switch (status) {
+    StageStatus.completed => 'Selesai',
+    StageStatus.active => 'Berjalan',
+    StageStatus.locked => 'Terkunci',
+    null => 'Segera hadir',
+  };
 
   @override
   Widget build(BuildContext context) {
     final ColorScheme scheme = Theme.of(context).colorScheme;
+    final MissionTones tones = MissionTones.of(context);
     final int nodes = stages.length + 1;
+    StageStatus? statusAt(int index) => index < stages.length
+        ? stageStatus(stageIndex: index, issuedCount: issuedCount)
+        : null;
     Widget line(bool done) => Expanded(
       child: SizedBox(
         height: 4,
         child: ColoredBox(color: done ? scheme.primary : scheme.outlineVariant),
       ),
     );
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        for (int index = 0; index < nodes; index++)
-          Expanded(
-            child: Column(
-              children: <Widget>[
-                SizedBox(
-                  height: 44,
-                  child: Row(
-                    children: <Widget>[
-                      if (index == 0)
-                        const Spacer()
-                      else
-                        line(index - 1 < issuedCount),
-                      _StageNode(
-                        number: index + 1,
-                        status: index < stages.length
-                            ? stageStatus(
-                                stageIndex: index,
-                                issuedCount: issuedCount,
-                              )
-                            : null,
+    final String summary = <String>[
+      for (int index = 0; index < nodes; index++)
+        'Tahap ${index + 1} ${_statusLabel(statusAt(index)).toLowerCase()}',
+    ].join(', ');
+    return Semantics(
+      label: summary,
+      excludeSemantics: true,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          for (int index = 0; index < nodes; index++)
+            Expanded(
+              child: Column(
+                children: <Widget>[
+                  SizedBox(
+                    height: 44,
+                    child: Row(
+                      children: <Widget>[
+                        if (index == 0)
+                          const Spacer()
+                        else
+                          line(index - 1 < issuedCount),
+                        _StageNode(number: index + 1, status: statusAt(index)),
+                        if (index == nodes - 1)
+                          const Spacer()
+                        else
+                          line(index < issuedCount),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  ...switch (labels) {
+                    MissionTrackLabels.amounts => <Widget>[
+                      Text(
+                        index < stages.length
+                            ? rupiah(stages[index].voucherAmount)
+                            : 'Segera',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 16 / 12,
+                          fontWeight: index == issuedCount
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: index == issuedCount && index < stages.length
+                              ? scheme.onSurface
+                              : scheme.onSurfaceVariant,
+                          fontFeatures: const <FontFeature>[
+                            FontFeature.tabularFigures(),
+                          ],
+                        ),
                       ),
-                      if (index == nodes - 1)
-                        const Spacer()
-                      else
-                        line(index < issuedCount),
                     ],
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  index < stages.length
-                      ? rupiah(stages[index].voucherAmount)
-                      : 'Segera',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 16 / 12,
-                    fontWeight: index == issuedCount
-                        ? FontWeight.w700
-                        : FontWeight.w500,
-                    color: index == issuedCount && index < stages.length
-                        ? scheme.onSurface
-                        : scheme.onSurfaceVariant,
-                    fontFeatures: const <FontFeature>[
-                      FontFeature.tabularFigures(),
+                    MissionTrackLabels.stages => <Widget>[
+                      Text(
+                        'Tahap ${index + 1}',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 16 / 12,
+                          fontWeight: FontWeight.w700,
+                          color:
+                              statusAt(index) == null ||
+                                  statusAt(index) == StageStatus.locked
+                              ? scheme.onSurfaceVariant
+                              : scheme.onSurface,
+                        ),
+                      ),
+                      Text(
+                        _statusLabel(statusAt(index)),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 11,
+                          height: 14 / 11,
+                          fontWeight: FontWeight.w600,
+                          color: switch (statusAt(index)) {
+                            StageStatus.completed => tones.success,
+                            StageStatus.active => scheme.primary,
+                            _ => scheme.onSurfaceVariant,
+                          },
+                        ),
+                      ),
                     ],
-                  ),
-                ),
-              ],
+                  },
+                ],
+              ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }

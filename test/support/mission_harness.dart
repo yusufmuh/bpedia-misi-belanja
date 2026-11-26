@@ -98,9 +98,10 @@ LocalMissionController localController({
   bool? soundOn = true,
   bool withProducts = true,
   Duration latency = Duration.zero,
+  List<MissionStage>? stages,
 }) {
   return LocalMissionController(
-    stages: harnessStages,
+    stages: stages ?? harnessStages,
     today: demoToday,
     stageProducts: withProducts
         ? <int, List<MissionProduct>>{0: stageOneProducts, 1: stageTwoProducts}

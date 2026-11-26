@@ -62,7 +62,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 1800));
       await settleImages(tester, rounds: 3);
       await saveShot(tester, 'misi_lembar_tuntas_$tone');
-      expect(find.text('Tahap 1 selesai'), findsOneWidget);
+      expect(find.text('Tahap 1 Misi Belanja selesai'), findsOneWidget);
     });
   }
 }

@@ -271,6 +271,7 @@ class _MissionsPageState extends State<MissionsPage> {
                   pendingNote: _pendingNote(state),
                   activeStatus: _phaseLabel(state),
                   activeTone: _phaseTone(state.phase),
+                  showTrack: false,
                 ),
               ),
             ),
@@ -457,7 +458,6 @@ class _MissionHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final MissionStage? stage = state.activeStage;
-    final int? index = state.activeIndex;
     final TextScaler scaler = MediaQuery.textScalerOf(
       context,
     ).clamp(maxScaleFactor: 1.5);
@@ -466,7 +466,7 @@ class _MissionHero extends StatelessWidget {
     return MediaQuery(
       data: MediaQuery.of(context).copyWith(textScaler: scaler),
       child: SizedBox(
-        height: 200,
+        height: 176,
         child: Stack(
           clipBehavior: Clip.none,
           children: <Widget>[
@@ -546,9 +546,9 @@ class _MissionHero extends StatelessWidget {
                       size: 16,
                       color: Colors.white,
                     ),
-                    label: stage == null || index == null
+                    label: stage == null
                         ? 'Semua tahap selesai'
-                        : '${stage.title} dari ${state.stages.length}',
+                        : 'Tahap ${stage.number} dari ${state.stages.length}',
                   ),
                   const SizedBox(height: 10),
                   const FittedBox(
@@ -671,40 +671,75 @@ class _ActiveStagePanel extends StatelessWidget {
         success: phase == MissionPhase.ready,
       );
     }
+    final bool stacked = MediaQuery.textScalerOf(context).scale(16) > 20;
+    final Widget target = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: <Widget>[
+            Text(
+              stage.title,
+              style: TextStyle(
+                fontSize: 15,
+                height: 20 / 15,
+                fontWeight: FontWeight.w700,
+                color: scheme.onSurface,
+              ),
+            ),
+            if (state.signedIn)
+              StatusPill(label: _phaseLabel(state), tone: _phaseTone(phase)),
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          'Produk misi min. ${rupiah(stage.minOrderSubtotal)} '
+          'dalam 1 pesanan',
+          style: TextStyle(
+            fontSize: 12,
+            height: 16 / 12,
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+      ],
+    );
+    final Widget coupon = _RewardCoupon(stage: stage, tones: tones);
     return FestivePanel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: <Widget>[
-              Text(
-                stage.title,
-                style: TextStyle(
-                  fontSize: 16,
-                  height: 22 / 16,
-                  fontWeight: FontWeight.w700,
-                  color: scheme.onSurface,
-                ),
-              ),
-              if (state.signedIn)
-                StatusPill(label: _phaseLabel(state), tone: _phaseTone(phase)),
-            ],
+          MissionStageTrack(
+            stages: state.stages,
+            issuedCount: state.issuedCount,
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Belanja produk misi min. ${rupiah(stage.minOrderSubtotal)} '
-            'dalam 1 pesanan',
-            style: TextStyle(
-              fontSize: 13,
-              height: 18 / 13,
-              color: scheme.onSurfaceVariant,
+          const SizedBox(height: 12),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: scheme.surfaceContainerHighest.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: stacked
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        target,
+                        const SizedBox(height: 8),
+                        coupon,
+                      ],
+                    )
+                  : Row(
+                      children: <Widget>[
+                        Expanded(child: target),
+                        const SizedBox(width: 10),
+                        coupon,
+                      ],
+                    ),
             ),
           ),
-          const SizedBox(height: 10),
-          _RewardCoupon(stage: stage, tones: tones),
           const SizedBox(height: 12),
           body,
         ],
@@ -728,46 +763,46 @@ class _RewardCoupon extends StatelessWidget {
           '${stage.voucherValidDays} hari',
       excludeSemantics: true,
       child: DecoratedBox(
+        key: const ValueKey<String>('mission-reward'),
         decoration: BoxDecoration(
           color: tones.goldTint,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: FestivePalette.gold.withValues(alpha: 0.45),
-          ),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: FestivePalette.gold.withValues(alpha: 0.6)),
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 12, 8),
+          padding: const EdgeInsets.fromLTRB(6, 6, 10, 6),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               const Bobbing(
-                amplitude: 3,
+                amplitude: 2,
                 tilt: 0.08,
-                child: Image(image: MissionArt.ticket, width: 44, height: 44),
+                child: Image(image: MissionArt.ticket, width: 34, height: 34),
               ),
-              const SizedBox(width: 10),
-              Expanded(
+              const SizedBox(width: 6),
+              Flexible(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     Text(
-                      'Voucher ${rupiah(stage.voucherAmount)}',
+                      'Voucher',
+                      style: TextStyle(
+                        fontSize: 11,
+                        height: 14 / 11,
+                        color: tones.onGoldTint,
+                      ),
+                    ),
+                    Text(
+                      rupiah(stage.voucherAmount),
                       style: TextStyle(
                         fontSize: 16,
-                        height: 22 / 16,
+                        height: 20 / 16,
                         fontWeight: FontWeight.w800,
                         color: tones.onGoldTint,
                         fontFeatures: const <FontFeature>[
                           FontFeature.tabularFigures(),
                         ],
-                      ),
-                    ),
-                    Text(
-                      'Min. belanja ${rupiah(stage.voucherMinSpend)} · '
-                      'berlaku ${stage.voucherValidDays} hari',
-                      style: TextStyle(
-                        fontSize: 12,
-                        height: 16 / 12,
-                        color: tones.onGoldTint,
                       ),
                     ),
                   ],
@@ -1137,17 +1172,26 @@ class _BottomBar extends StatelessWidget {
     final bool ready = state.phase == MissionPhase.ready;
     final int current = progress?.current ?? 0;
     final bool large = MediaQuery.textScalerOf(context).scale(16) > 20;
+    final int count = _cartCount(state);
     final Widget action = CandyButton(
-      label: ready ? 'Checkout' : 'Lihat keranjang',
-      icon: ready
-          ? const Icon(
-              Icons.shopping_cart_checkout_rounded,
-              size: 20,
-              color: Colors.white,
-            )
-          : null,
+      label: ready ? 'Checkout' : 'Keranjang',
+      semanticLabel: ready ? null : 'Lihat keranjang',
+      icon: Badge(
+        key: cartTargetKey,
+        isLabelVisible: count > 0,
+        label: Text(count > 99 ? '99+' : '$count'),
+        backgroundColor: FestivePalette.gold,
+        textColor: FestivePalette.festDeep,
+        offset: const Offset(8, -6),
+        child: Icon(
+          ready
+              ? Icons.shopping_cart_checkout_rounded
+              : Icons.shopping_cart_outlined,
+          size: 20,
+          color: Colors.white,
+        ),
+      ),
       pulse: ready,
-      variant: ready ? CandyVariant.pink : CandyVariant.tonal,
       onPressed: ready ? onCheckout : onCart,
     );
     final Widget summary = Row(
@@ -1158,42 +1202,47 @@ class _BottomBar extends StatelessWidget {
             label: 'Produk misi di keranjang',
             value: ready
                 ? '${rupiah(current)}, target tercapai'
-                : '${rupiah(current)}, kurang '
-                      '${rupiah(progress?.remaining ?? 0)}',
+                : '${rupiah(current)}, tambah '
+                      '${rupiah(progress?.remaining ?? 0)} lagi, '
+                      '$count produk di keranjang',
             excludeSemantics: true,
             child: Row(
-              key: cartTargetKey,
               children: <Widget>[
-                _CartBadge(count: _cartCount(state)),
-                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      Text(
-                        'Produk misi',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          height: 16 / 12,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
                       FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: AlignmentDirectional.centerStart,
-                        child: CountUpText(
-                          value: current,
-                          prefix: 'Rp',
-                          bump: true,
-                          style: TextStyle(
-                            fontSize: 18,
-                            height: 24 / 18,
-                            fontWeight: FontWeight.w800,
-                            color: ready ? tones.success : scheme.secondary,
-                          ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: <Widget>[
+                            Text(
+                              'Di keranjang',
+                              maxLines: 1,
+                              style: TextStyle(
+                                fontSize: 12,
+                                height: 16 / 12,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            CountUpText(
+                              value: current,
+                              prefix: 'Rp',
+                              bump: true,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 18 / 13,
+                                fontWeight: FontWeight.w700,
+                                color: scheme.onSurface,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       FittedBox(
@@ -1202,13 +1251,14 @@ class _BottomBar extends StatelessWidget {
                         child: Text(
                           ready
                               ? 'Target tercapai'
-                              : 'Kurang ${rupiah(progress?.remaining ?? 0)}',
+                              : 'Tambah ${rupiah(progress?.remaining ?? 0)} '
+                                    'lagi',
                           maxLines: 1,
                           style: TextStyle(
-                            fontSize: 12,
-                            height: 16 / 12,
-                            fontWeight: FontWeight.w600,
-                            color: ready ? tones.success : scheme.onSurface,
+                            fontSize: 14,
+                            height: 20 / 14,
+                            fontWeight: FontWeight.w800,
+                            color: ready ? tones.success : scheme.secondary,
                           ),
                         ),
                       ),
@@ -1221,21 +1271,53 @@ class _BottomBar extends StatelessWidget {
         ),
       ],
     );
-    if (large) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[summary, const SizedBox(height: 8), action],
-      );
-    }
-    return Row(
+    final Widget content = large
+        ? Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[summary, const SizedBox(height: 8), action],
+          )
+        : Row(
+            children: <Widget>[
+              Expanded(child: summary),
+              const SizedBox(width: 10),
+              Expanded(child: action),
+            ],
+          );
+    final double fraction = progress?.fraction ?? 0;
+    return Stack(
+      clipBehavior: Clip.none,
       children: <Widget>[
-        Expanded(flex: 5, child: summary),
-        const SizedBox(width: 10),
-        Expanded(flex: 6, child: action),
+        content,
+        Positioned(
+          top: -_barInset.top,
+          left: -_barInset.left,
+          right: -_barInset.right,
+          height: 4,
+          child: ExcludeSemantics(
+            child: TweenAnimationBuilder<double>(
+              key: const ValueKey<String>('mission-bar-progress'),
+              tween: Tween<double>(end: fraction),
+              duration: reduceMotionOf(context)
+                  ? Duration.zero
+                  : const Duration(milliseconds: 420),
+              curve: Curves.easeOutCubic,
+              builder: (BuildContext context, double value, Widget? child) =>
+                  LinearProgressIndicator(
+                    value: value,
+                    minHeight: 4,
+                    backgroundColor: scheme.surfaceContainerHighest,
+                    color: ready ? tones.success : scheme.primary,
+                  ),
+            ),
+          ),
+        ),
       ],
     );
   }
+
+  /// Padding bilah bawah `GameScaffold`; garis progres menempel di tepi atas.
+  static const EdgeInsets _barInset = EdgeInsets.fromLTRB(16, 10, 16, 10);
 }
 
 int _cartCount(MissionViewState state) {
