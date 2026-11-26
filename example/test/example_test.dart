@@ -65,7 +65,7 @@ void main() {
     await tester.tap(find.text('Selesai'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 800));
-    expect(find.text('Tahap 1 selesai'), findsOneWidget);
+    expect(find.text('Tahap 1 Misi Belanja selesai'), findsOneWidget);
     expect(controller.state.issuedCount, 1);
   });
 }

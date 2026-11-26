@@ -1,5 +1,34 @@
 # Changelog · misi_belanja
 
+## 3.0.0 · perbaikan paritas Figma (26 Nov 2026)
+
+### Diperbaiki
+
+- Chip hero menampilkan "Tahap N dari M" dari nomor tahap; sebelumnya judul
+  tahap kustom tampil sebagai pembilang ("Skincare Animate dari 2").
+- Lembar "Misi tuntas": tautan "Lanjut tahap N" memakai nomor tahap, bukan
+  judul kustom.
+
+### Diubah
+
+- Kartu tahap aktif diawali tangga tahap (`MissionStageTrack`: Tahap N +
+  Selesai/Berjalan/Terkunci/Segera hadir); target dan kupon voucher satu
+  baris; tinggi hero 176 dp sehingga produk misi naik. Seksi "Tahapan dan
+  hadiah" tidak lagi mengulang jalur tahap (`MissionLadder.showTrack`).
+- Bilah lekat: "Di keranjang RpX" / "Tambah RpY lagi" (sebelumnya "Kurang"),
+  garis progres 4 dp di tepi atas, tombol pink "Keranjang" berikon dengan
+  lencana jumlah barang (label aksesibilitas "Lihat keranjang").
+- Lembar "Misi tuntas" disamakan dengan perayaan hub: judul "Tahap N Misi
+  Belanja selesai", tombol pink berikon tiket, catatan "Berlaku s.d.
+  <tanggal>" dari `expiresDay` voucher, "Nanti saja" pada tahap terakhir.
+
+### Ditambahkan
+
+- `MissionStageTrack`, `MissionTrackLabels`.
+- Runner web dan Android di `example/` (`flutter run -d chrome`).
+- `repository:` di `pubspec.yaml`, contoh dependensi Git di README, catatan
+  lisensi (belum ditetapkan pemilik).
+
 ## 3.0.0 · halaman game (26 Nov 2026)
 
 Halaman Misi Belanja v3 (K4, SPEC-V3 §6.3) di atas aturan 3.0.0.

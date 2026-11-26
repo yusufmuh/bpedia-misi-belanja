@@ -31,6 +31,18 @@ Halaman penuh tahap 2 (gelap) dan teks 200% di lebar 360: `docs/shots/misi_tahap
 
 ## Pemasangan
 
+Dari Git (tag rilis):
+
+```yaml
+dependencies:
+  misi_belanja:
+    git:
+      url: https://github.com/yusufmuh/bpedia-misi-belanja.git
+      ref: v3.0.0
+```
+
+Atau dari salinan lokal di sebelah repo host:
+
 ```yaml
 dependencies:
   misi_belanja:
@@ -99,8 +111,9 @@ class HubMissionController extends MissionController {
 | Simbol | Isi |
 |---|---|
 | `MissionsPage({required controller, title = 'Misi Belanja', onBack, showBack = true})` | Halaman lengkap (SPEC-V3 §6.3). |
-| `showMissionCompleteSheet(context, {required celebration, required onSeeVoucher, onNextStage})` | Lembar "Misi tuntas" (kit `ResultSheet`); dipakai halaman dan bisa dipakai hub. |
-| `MissionLadder({required stages, required issuedCount, pendingNote, activeStatus, activeTone})` | Jalur tahap horizontal + kartu tiap tahap (target, kupon hadiah, status). |
+| `showMissionCompleteSheet(context, {required celebration, required onSeeVoucher, onNextStage})` | Lembar "Misi tuntas" (kit `ResultSheet`): judul "Tahap N Misi Belanja selesai", tombol pink "Lihat voucher", catatan "Berlaku s.d. <tanggal>", tautan "Lanjut tahap N" atau "Nanti saja" (sama dengan perayaan hub). |
+| `MissionLadder({required stages, required issuedCount, pendingNote, activeStatus, activeTone, showTrack = true})` | Jalur tahap horizontal + kartu tiap tahap (target, kupon hadiah, status). `showTrack: false` menyembunyikan jalur (halaman sudah memasangnya di kartu atas). |
+| `MissionStageTrack({required stages, required issuedCount, labels = MissionTrackLabels.stages})` | Tangga tahap 40 dp: "Tahap N" + status (Selesai, Berjalan, Terkunci, Segera hadir) atau nominal voucher (`MissionTrackLabels.amounts`). |
 | `VoucherCard({required voucher, required today, onUse})` | Kupon tiket voucher misi; status Aktif/Terpakai/Kedaluwarsa; stub pindah ke atas pada huruf besar. |
 | `MissionProgressTrack({required progress, required label, required message, messageIcon, success, showWalker})` | Bar progres tebal, Bipy berjalan di ujung isian, bendera target, denyut saat bertambah. |
 | `MissionProductCard({required product, required quantity, required onAdd, required onQuantityChanged, onOpen, addButtonKey})`, `QtyStepper` | Kartu produk marketplace berpita "Misi" dengan tambah cepat / stepper. |
@@ -114,10 +127,12 @@ class HubMissionController extends MissionController {
 ## Perilaku halaman
 
 - **Tamu**: halaman tetap tampil (target, hadiah, produk), progres disembunyikan, bar bawah "Masuk untuk ikut misi". Tambah ke keranjang tetap boleh.
-- **Tambah ke keranjang**: cue `tap`, tiga tas terbang ke ringkasan keranjang di bar bawah, angka naik, bar progres mengisi dan berdenyut. Gagal (batas jumlah) → cue `softError` + pesan lembut.
+- **Kartu atas**: tangga tahap (Tahap 1 Selesai, Tahap 2 Berjalan, Tahap 3 Segera hadir), target tahap dan kupon voucher satu baris, lalu bar progres. Chip hero "Tahap N dari M" selalu memakai nomor tahap, judul tahap kustom tampil di kartu.
+- **Bilah lekat**: "Di keranjang RpX" / "Tambah RpY lagi", garis progres 4 dp di tepi atas, tombol pink "Keranjang" dengan lencana jumlah barang.
+- **Tambah ke keranjang**: cue `tap`, tiga tas terbang ke ikon keranjang di bilah bawah, angka naik, bar progres mengisi dan berdenyut. Gagal (batas jumlah) → cue `softError` + pesan lembut.
 - **Target tercapai**: bar dan teks berubah hijau, konfeti, cue `bonus`, pengumuman pembaca layar, tombol "Checkout" berdenyut.
 - **Menunggu pesanan selesai**: bar penuh dengan subtotal pesanan, catatan nomor dan status pesanan, tombol "Lihat pesanan".
-- **Tahap tuntas** (`state.celebration`): lembar perayaan sekali (`acknowledgeCelebration`), cue `missionDone`, aksi "Lihat voucher" (gulir ke voucher) dan "Lanjut tahap N".
+- **Tahap tuntas** (`state.celebration`): lembar perayaan sekali (`acknowledgeCelebration`), cue `missionDone`, aksi "Lihat voucher" (gulir ke voucher) dan "Lanjut tahap N" (tahap terakhir: "Nanti saja").
 - **Semua tahap selesai**: kartu Bipy menyemangati; grid disembunyikan; "Belanja lagi".
 - **Kurangi gerak** (`MediaQuery.disableAnimations`): bar langsung ke nilai akhir, sprite di frame pertama, pose diam, konfeti diganti taburan diam (kit).
 - Teks tahan skala 200% di lebar 360 (diuji untuk lima keadaan), target sentuh ≥ 48, Semantics pada progres, kartu tahap, tombol, voucher.
@@ -132,6 +147,16 @@ cd example && flutter test              # tes app contoh
 php -d extension=pdo_sqlite server/missions.php   # swa-uji server referensi
 ```
 
-`example/` hanya berisi kode Dart, aset, dan `pubspec.yaml`; buat runner sekali dengan `flutter create --platforms=web,android .` di dalam `example/` bila ingin menjalankannya. Tombol kembali halaman contoh membuka panel uji (masuk/keluar, checkout/kirim/selesai/batal, ganti hari, tema gelap, kurangi gerak).
+Runner web dan Android sudah ada di `example/`:
+
+```bash
+cd example && flutter run -d chrome
+```
+
+Tombol kembali halaman contoh membuka panel uji (masuk/keluar, checkout/kirim/selesai/batal, ganti hari, tema gelap, kurangi gerak).
 
 `lib/src/kit/` adalah salinan identik kit pesta dari `bpedia-asset-build/v3/kit_src` (jangan diubah per modul; dikecualikan dari analyzer modul).
+
+## Lisensi
+
+Lisensi belum ditetapkan pemilik. Sampai ada berkas `LICENSE`, kode ini hanya untuk Bpedia Demo.

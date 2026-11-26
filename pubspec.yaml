@@ -5,6 +5,7 @@ description: >-
   beranimasi dengan Bipy berjalan, kupon voucher, dan perayaan tahap tuntas.
 version: 3.0.0
 publish_to: none
+repository: https://github.com/yusufmuh/bpedia-misi-belanja
 
 environment:
   sdk: ^3.11.0
